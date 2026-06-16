@@ -89,8 +89,8 @@
 
     // Направление: в регистрацию — слева-снизу вправо-вверх; обратно — зеркально.
     // Позиции симметричны: на середине (translate 0,0) лист накрывает центр карточки.
-    const leftPos  = 'translate(-100%, 70%) rotate(-18deg)';   // далеко слева-снизу
-    const rightPos = 'translate(100%, -70%) rotate(-18deg)';   // далеко справа-сверху
+    const leftPos  = 'translate(-110%, 70%) rotate(-18deg)';   // далеко слева-снизу
+    const rightPos = 'translate(110%, -70%) rotate(-18deg)';   // далеко справа-сверху
     const start = toRegister ? leftPos  : rightPos;
     const end   = toRegister ? rightPos : leftPos;
 
