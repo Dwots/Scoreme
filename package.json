@@ -1,0 +1,24 @@
+{
+  "name": "scoreme",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ScoreMe LMS for SCORM 1.2 and 2004 packages",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.3.0",
+    "connect-sqlite3": "^0.9.15",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "fast-xml-parser": "^4.5.0",
+    "multer": "^2.2.0",
+    "nanoid": "^3.3.7"
+  }
+}

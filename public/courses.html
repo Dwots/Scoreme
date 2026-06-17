@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScoreMe — мои курсы</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">ScoreMe</div>
+    <div class="header-right">
+      <span class="user-email" id="userEmail"></span>
+      <button class="theme-toggle" id="themeToggle">Тёмная тема</button>
+      <button class="theme-toggle" id="logoutBtn">Выйти</button>
+    </div>
+  </header>
+
+  <main class="courses-wrap">
+    <section class="upload-zone" id="uploadZone">
+      <label for="fileInput" class="upload-label">
+        <strong>Перетащите SCORM&nbsp;.zip сюда</strong>
+        <span>или нажмите, чтобы выбрать файл</span>
+      </label>
+      <input type="file" id="fileInput" accept=".zip,application/zip" hidden>
+      <div class="upload-status" id="uploadStatus"></div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Мои курсы</h2>
+      <div class="courses-grid" id="coursesGrid">
+        <div class="empty" id="emptyState">Пока ни одного курса. Загрузите первый.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="courses.js"></script>
+</body>
+</html>

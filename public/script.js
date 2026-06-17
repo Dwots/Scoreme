@@ -122,11 +122,47 @@
     themeToggle.textContent = next === 'dark' ? 'Светлая тема' : 'Тёмная тема';
   });
 
-  // ── Отправка формы: пока заглушка под бэкенд ──
-  form.addEventListener('submit', (e) => {
+  // ── Отправка формы на /api/auth/{login,register} ──
+  const errorBox      = document.getElementById('authError');
+  const emailInput    = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const confirmInput  = document.getElementById('confirmPassword');
+
+  function showError(msg) { errorBox.textContent = msg || ''; }
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    // TODO: здесь будет fetch на бэкенд — /api/login или /api/register.
-    // Договоритесь с бэкендером про адрес и формат (обычно JSON).
-    console.log('Отправка в режиме:', mode);
+    showError('');
+
+    const email    = (emailInput.value || '').trim();
+    const password = passwordInput.value || '';
+    if (!email || !password) { showError('Введите email и пароль'); return; }
+    if (mode === 'register' && password !== (confirmInput.value || '')) {
+      showError('Пароли не совпадают');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    try {
+      const endpoint = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) { showError(body.error || 'Ошибка'); return; }
+      location.href = '/courses.html';
+    } catch (err) {
+      showError('Сеть недоступна');
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
+
+  // ── Если уже залогинены — сразу на /courses.html ──
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then((r) => { if (r.ok) location.href = '/courses.html'; })
+    .catch(() => { /* offline — остаёмся на форме */ });
 })();
