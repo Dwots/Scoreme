@@ -4,16 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScoreMe — плеер</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.44.0/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    try {
+      var t = localStorage.getItem('scoreme-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
   <script src="player.js"></script>
 </head>
 <body>
   <div class="player-wrap">
     <div class="player-bar">
       <div class="player-title" id="playerTitle">Загрузка…</div>
-      <a href="/courses.html" class="theme-toggle">Назад к курсам</a>
+      <div class="player-bar-right">
+        <button class="icon-btn" id="themeToggle" aria-label="Сменить тему"></button>
+        <a href="/courses.html" class="btn"><i class="ti ti-arrow-left" aria-hidden="true"></i> К курсам</a>
+      </div>
     </div>
     <iframe class="player-frame" id="playerFrame" title="SCORM content"></iframe>
   </div>
+
+  <!-- Переключение темы. Вынесено сюда, чтобы не трогать player.js со SCORM-мостом. -->
+  <script>
+    (function () {
+      var html = document.documentElement;
+      var btn = document.getElementById('themeToggle');
+      function sync() {
+        var dark = html.getAttribute('data-theme') === 'dark';
+        btn.innerHTML = dark ? '<i class="ti ti-sun"></i>' : '<i class="ti ti-moon"></i>';
+        btn.setAttribute('aria-label', dark ? 'Светлая тема' : 'Тёмная тема');
+      }
+      btn.addEventListener('click', function () {
+        var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        try { localStorage.setItem('scoreme-theme', next); } catch (e) {}
+        sync();
+      });
+      sync();
+    })();
+  </script>
 </body>
 </html>

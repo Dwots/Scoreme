@@ -4,35 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScoreMe — мои курсы</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.44.0/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    try {
+      var t = localStorage.getItem('scoreme-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <header class="site-header">
-    <div class="brand">ScoreMe</div>
+    <span class="brand"><i class="ti ti-player-track-next" aria-hidden="true"></i> ScoreMe</span>
     <div class="header-right">
       <span class="user-email" id="userEmail"></span>
-      <button class="theme-toggle" id="themeToggle">Тёмная тема</button>
-      <button class="theme-toggle" id="logoutBtn">Выйти</button>
+      <button class="icon-btn" id="themeToggle" aria-label="Сменить тему"></button>
+      <button class="btn" id="logoutBtn"><i class="ti ti-logout" aria-hidden="true"></i> Выйти</button>
     </div>
   </header>
 
   <main class="courses-wrap">
     <section class="upload-zone" id="uploadZone">
-      <label for="fileInput" class="upload-label">
+      <label class="upload-label">
+        <i class="ti ti-upload upload-icon" aria-hidden="true"></i>
         <strong>Перетащите SCORM&nbsp;.zip сюда</strong>
-        <span>или нажмите, чтобы выбрать файл</span>
+        <span>или нажмите, чтобы выбрать файл · до 200&nbsp;МБ</span>
       </label>
       <input type="file" id="fileInput" accept=".zip,application/zip" hidden>
       <div class="upload-status" id="uploadStatus"></div>
     </section>
 
     <section>
-      <h2 class="section-title">Мои курсы</h2>
+      <h2 class="section-title">Мои курсы <span class="count" id="coursesCount"></span></h2>
       <div class="courses-grid" id="coursesGrid">
         <div class="empty" id="emptyState">Пока ни одного курса. Загрузите первый.</div>
       </div>
     </section>
   </main>
+
+  <!-- Кастомное окно подтверждения (вместо браузерного confirm) -->
+  <div class="modal-overlay" id="confirmOverlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal-title" id="confirmTitle">Удалить курс?</div>
+      <div class="modal-text" id="confirmText">Это действие нельзя отменить.</div>
+      <div class="modal-actions">
+        <button class="btn" id="confirmCancel">Отмена</button>
+        <button class="btn btn-danger" id="confirmOk"><i class="ti ti-trash" aria-hidden="true"></i> Удалить</button>
+      </div>
+    </div>
+  </div>
 
   <script src="courses.js"></script>
 </body>

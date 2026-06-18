@@ -19,7 +19,7 @@ const upload = multer({
 });
 
 const listByOwner = db.prepare(`
-  SELECT c.id, c.title, c.scorm_version, c.entry_point, c.original_filename, c.uploaded_at,
+  SELECT c.id, c.title, c.scorm_version, c.entry_point, c.original_filename, c.mastery_score, c.uploaded_at,
          s.data AS state_data
   FROM courses c
   LEFT JOIN scorm_state s ON s.course_id = c.id AND s.user_id = c.owner_id
@@ -27,11 +27,11 @@ const listByOwner = db.prepare(`
   ORDER BY c.uploaded_at DESC
 `);
 const insertCourse = db.prepare(`
-  INSERT INTO courses (id, owner_id, title, scorm_version, entry_point, original_filename)
-  VALUES (?, ?, ?, ?, ?, ?)
+  INSERT INTO courses (id, owner_id, title, scorm_version, entry_point, original_filename, mastery_score)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
 `);
 const getCourse = db.prepare(`
-  SELECT id, owner_id, title, scorm_version, entry_point, original_filename, uploaded_at
+  SELECT id, owner_id, title, scorm_version, entry_point, original_filename, mastery_score, uploaded_at
   FROM courses WHERE id = ?
 `);
 const deleteCourseStmt = db.prepare('DELETE FROM courses WHERE id = ?');
@@ -85,6 +85,29 @@ function flattenWrapperDir(courseDir) {
   }
 }
 
+function clampPct(n) {
+  return Math.round(Math.max(0, Math.min(100, n)));
+}
+
+// Процент прохождения 0..100 из доступных SCORM-полей, по убыванию надёжности.
+function computePercent(d, status) {
+  const measure = parseFloat(d['cmi.progress_measure']);     // SCORM 2004: 0..1
+  if (!Number.isNaN(measure)) return clampPct(measure * 100);
+
+  const scaled = parseFloat(d['cmi.score.scaled']);          // 0..1
+  if (!Number.isNaN(scaled)) return clampPct(scaled * 100);
+
+  const raw = parseFloat(d['cmi.score.raw'] || d['cmi.core.score.raw']);
+  const max = parseFloat(d['cmi.score.max'] || d['cmi.core.score.max']);
+  if (!Number.isNaN(raw)) {
+    if (!Number.isNaN(max) && max > 0) return clampPct((raw / max) * 100);
+    if (raw >= 0 && raw <= 100) return clampPct(raw);        // 1.2 обычно 0..100
+  }
+
+  if (status === 'completed' || status === 'passed') return 100;
+  return null;
+}
+
 function pickStatus(stateJson) {
   if (!stateJson) return null;
   try {
@@ -92,7 +115,7 @@ function pickStatus(stateJson) {
     const status = d['cmi.completion_status'] || d['cmi.core.lesson_status'] || null;
     const success = d['cmi.success_status'] || null;
     const score = d['cmi.score.raw'] || d['cmi.core.score.raw'] || null;
-    return { status, success, score };
+    return { status, success, score, percent: computePercent(d, status) };
   } catch { return null; }
 }
 
@@ -104,6 +127,7 @@ router.get('/', requireAuth, (req, res) => {
     scorm_version: r.scorm_version,
     entry_point: r.entry_point,
     original_filename: r.original_filename,
+    passing_score: r.mastery_score,
     uploaded_at: r.uploaded_at,
     progress: pickStatus(r.state_data),
   })));
@@ -121,10 +145,11 @@ router.post('/', requireAuth, upload.single('file'), (req, res) => {
     flattenWrapperDir(courseDir);
     const info = parseManifest(courseDir);
     fs.writeFileSync(zipPath, req.file.buffer);
-    insertCourse.run(id, req.session.userId, info.title, info.version, info.entryPoint, req.file.originalname || null);
+    insertCourse.run(id, req.session.userId, info.title, info.version, info.entryPoint, req.file.originalname || null, info.masteryScore ?? null);
     res.status(201).json({
       id, title: info.title, scorm_version: info.version,
       entry_point: info.entryPoint, original_filename: req.file.originalname,
+      passing_score: info.masteryScore ?? null,
     });
   } catch (err) {
     rmrf(courseDir);
@@ -138,7 +163,7 @@ router.get('/:id', requireAuth, ownsCourse, (req, res) => {
   res.json({
     id: row.id, title: row.title, scorm_version: row.scorm_version,
     entry_point: row.entry_point, original_filename: row.original_filename,
-    uploaded_at: row.uploaded_at,
+    passing_score: row.mastery_score, uploaded_at: row.uploaded_at,
   });
 });
 

@@ -28,6 +28,7 @@ db.exec(`
     scorm_version     TEXT NOT NULL,
     entry_point       TEXT NOT NULL,
     original_filename TEXT,
+    mastery_score     REAL,
     uploaded_at       TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -41,5 +42,8 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_courses_owner ON courses(owner_id);
 `);
+
+// Миграция для баз, созданных до появления колонки порога прохождения.
+try { db.exec('ALTER TABLE courses ADD COLUMN mastery_score REAL'); } catch (_) { /* уже есть */ }
 
 module.exports = { db, STORAGE_DIR };

@@ -39,40 +39,32 @@
   }
 
   // Подмена контента + плавная анимация высоты формы.
-  // Фиксируем текущую высоту, меняем поля, измеряем новую — и едем к ней
-  // через CSS-transition. Делаем это под бликом, поэтому скачка не видно.
   function swapWithHeight(targetMode) {
-    const from = form.offsetHeight;       // высота «до»
-    applyContent(targetMode);             // меняем поля -> натуральная высота другая
+    const from = form.offsetHeight;
+    applyContent(targetMode);
     form.style.height = 'auto';
-    const to = form.offsetHeight;         // высота «после» (без покраски — браузер не рисует)
-    form.style.height = from + 'px';      // возвращаем старт, чтобы было откуда анимировать
-    requestAnimationFrame(() => {         // на след. кадре отпускаем — transition сам доедет
+    const to = form.offsetHeight;
+    form.style.height = from + 'px';
+    requestAnimationFrame(() => {
       form.style.height = to + 'px';
     });
   }
 
-  // Когда анимация высоты закончилась — снимаем фиксированную высоту,
-  // чтобы форма снова подстраивалась сама (например, при ресайзе).
   form.addEventListener('transitionend', (e) => {
     if (e.propertyName === 'height') form.style.height = '';
   });
 
   // Главная функция: переключение режима с бликом.
   function switchTo(targetMode) {
-    if (targetMode === mode) return;  // уже в этом режиме — ничего не делаем
+    if (targetMode === mode) return;
 
-    // 1) ПРЕРЫВАНИЕ: гасим всё, что ещё в полёте,
-    //    чтобы новый клик не накладывался на старую анимацию.
     if (sweepAnim) { sweepAnim.cancel(); sweepAnim = null; }
     if (swapTimer) { clearTimeout(swapTimer); swapTimer = null; }
 
-    // 2) Измеряем темп кликов.
     const now  = performance.now();
     const fast = (now - lastClick) < FAST_THRESHOLD;
     lastClick  = now;
 
-    // 3) Если у пользователя «уменьшить движение» — без блика, только затухание.
     if (reducedMotion) {
       stage.classList.add('swapping');
       swapTimer = setTimeout(() => {
@@ -83,14 +75,11 @@
       return;
     }
 
-    // 4) Обычный путь: запускаем блик.
     const duration   = fast ? DUR_FAST : DUR_NORMAL;
     const toRegister = targetMode === 'register';
 
-    // Направление: в регистрацию — слева-снизу вправо-вверх; обратно — зеркально.
-    // Позиции симметричны: на середине (translate 0,0) лист накрывает центр карточки.
-    const leftPos  = 'translate(-110%, 70%) rotate(-18deg)';   // далеко слева-снизу
-    const rightPos = 'translate(110%, -70%) rotate(-18deg)';   // далеко справа-сверху
+    const leftPos  = 'translate(-110%, 70%) rotate(-18deg)';
+    const rightPos = 'translate(110%, -70%) rotate(-18deg)';
     const start = toRegister ? leftPos  : rightPos;
     const end   = toRegister ? rightPos : leftPos;
 
@@ -104,7 +93,6 @@
       { duration: duration, easing: 'ease-in-out' }
     );
 
-    // 5) Подмена контента + высоты ровно в середине прохода — под ярким листом.
     swapTimer = setTimeout(() => swapWithHeight(targetMode), duration / 2);
 
     sweepAnim.onfinish = () => { sweepAnim = null; };
@@ -115,18 +103,27 @@
   tabLogin.addEventListener('click',    () => switchTo('login'));
   tabRegister.addEventListener('click', () => switchTo('register'));
 
-  // ── Переключение темы ──
+  // ── Тема: переключение + запоминание в localStorage + иконка ──
+  function syncThemeIcon() {
+    const dark = html.getAttribute('data-theme') === 'dark';
+    themeToggle.innerHTML = dark ? '<i class="ti ti-sun"></i>' : '<i class="ti ti-moon"></i>';
+    themeToggle.setAttribute('aria-label', dark ? 'Светлая тема' : 'Тёмная тема');
+  }
   themeToggle.addEventListener('click', () => {
     const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', next);
-    themeToggle.textContent = next === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+    try { localStorage.setItem('scoreme-theme', next); } catch (_) {}
+    syncThemeIcon();
   });
+  syncThemeIcon();
 
   // ── Отправка формы на /api/auth/{login,register} ──
   const errorBox      = document.getElementById('authError');
   const emailInput    = document.getElementById('email');
   const passwordInput = document.getElementById('password');
   const confirmInput  = document.getElementById('confirmPassword');
+  const firstNameInput = document.getElementById('firstName');
+  const lastNameInput  = document.getElementById('lastName');
 
   function showError(msg) { errorBox.textContent = msg || ''; }
 
@@ -137,10 +134,18 @@
     const email    = (emailInput.value || '').trim();
     const password = passwordInput.value || '';
     if (!email || !password) { showError('Введите email и пароль'); return; }
-    if (mode === 'register' && password !== (confirmInput.value || '')) {
-      showError('Пароли не совпадают');
-      return;
+    if (mode === 'register') {
+      if (password.length < 6) { showError('Пароль не короче 6 символов'); return; }
+      if (password !== (confirmInput.value || '')) { showError('Пароли не совпадают'); return; }
     }
+
+    // Тело запроса. Бэкенд сейчас принимает только { email, password }.
+    // Когда на сервере добавят поддержку имени/фамилии — раскомментируй строки ниже.
+    const payload = { email, password };
+    // if (mode === 'register') {
+    //   payload.firstName = (firstNameInput.value || '').trim();
+    //   payload.lastName  = (lastNameInput.value  || '').trim();
+    // }
 
     submitBtn.disabled = true;
     try {
@@ -149,7 +154,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(payload),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) { showError(body.error || 'Ошибка'); return; }
