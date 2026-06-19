@@ -234,7 +234,8 @@
       const res = await fetch('/api/auth/me', { credentials: 'include' });
       if (!res.ok) { location.href = '/'; return; }
       const me = await res.json();
-      userEmail.textContent = me.email;
+      const name = [me.firstName, me.lastName].filter(Boolean).join(' ');
+      userEmail.textContent = name ? `${name} · ${me.email}` : me.email;
       loadCourses();
     } catch (_) {
       location.href = '/';

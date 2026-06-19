@@ -7,8 +7,8 @@ const router = express.Router();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BCRYPT_ROUNDS = 10;
 
-const findByEmail = db.prepare('SELECT id, email, password_hash FROM users WHERE email = ?');
-const insertUser  = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)');
+const findByEmail = db.prepare('SELECT id, email, password_hash, first_name, last_name FROM users WHERE email = ?');
+const insertUser  = db.prepare('INSERT INTO users (email, password_hash, first_name, last_name) VALUES (?, ?, ?, ?)');
 
 function validate(email, password) {
   if (typeof email !== 'string' || !EMAIL_RE.test(email)) return 'invalid email';
@@ -16,8 +16,16 @@ function validate(email, password) {
   return null;
 }
 
+// Имя/фамилия необязательны: приводим к строке, обрезаем пробелы и длину,
+// пустую строку храним как null.
+function cleanName(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim().slice(0, 100);
+  return trimmed || null;
+}
+
 router.post('/register', async (req, res) => {
-  const { email, password } = req.body || {};
+  const { email, password, firstName, lastName } = req.body || {};
   const err = validate(email, password);
   if (err) return res.status(400).json({ error: err });
 
@@ -26,11 +34,15 @@ router.post('/register', async (req, res) => {
     return res.status(409).json({ error: 'email already registered' });
   }
 
+  const first = cleanName(firstName);
+  const last  = cleanName(lastName);
   const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  const info = insertUser.run(normalized, hash);
-  req.session.userId = info.lastInsertRowid;
-  req.session.email  = normalized;
-  res.status(201).json({ id: info.lastInsertRowid, email: normalized });
+  const info = insertUser.run(normalized, hash, first, last);
+  req.session.userId    = info.lastInsertRowid;
+  req.session.email     = normalized;
+  req.session.firstName = first;
+  req.session.lastName  = last;
+  res.status(201).json({ id: info.lastInsertRowid, email: normalized, firstName: first, lastName: last });
 });
 
 router.post('/login', async (req, res) => {
@@ -45,21 +57,28 @@ router.post('/login', async (req, res) => {
   const ok = await bcrypt.compare(password, user.password_hash);
   if (!ok) return res.status(401).json({ error: 'invalid credentials' });
 
-  req.session.userId = user.id;
-  req.session.email  = user.email;
-  res.json({ id: user.id, email: user.email });
+  req.session.userId    = user.id;
+  req.session.email     = user.email;
+  req.session.firstName = user.first_name;
+  req.session.lastName  = user.last_name;
+  res.json({ id: user.id, email: user.email, firstName: user.first_name, lastName: user.last_name });
 });
 
 router.post('/logout', (req, res) => {
   req.session.destroy(() => {
-    res.clearCookie('connect.sid');
+    res.clearCookie('scoreme.sid');
     res.status(204).end();
   });
 });
 
 router.get('/me', (req, res) => {
   if (!req.session || !req.session.userId) return res.status(401).json({ error: 'unauthorized' });
-  res.json({ id: req.session.userId, email: req.session.email });
+  res.json({
+    id: req.session.userId,
+    email: req.session.email,
+    firstName: req.session.firstName || null,
+    lastName: req.session.lastName || null,
+  });
 });
 
 module.exports = router;

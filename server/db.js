@@ -18,6 +18,8 @@ db.exec(`
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     email         TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
+    first_name    TEXT,
+    last_name     TEXT,
     created_at    TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -43,7 +45,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_courses_owner ON courses(owner_id);
 `);
 
-// Миграция для баз, созданных до появления колонки порога прохождения.
+// Миграции для баз, созданных до появления новых колонок.
 try { db.exec('ALTER TABLE courses ADD COLUMN mastery_score REAL'); } catch (_) { /* уже есть */ }
+try { db.exec('ALTER TABLE users ADD COLUMN first_name TEXT'); } catch (_) { /* уже есть */ }
+try { db.exec('ALTER TABLE users ADD COLUMN last_name TEXT'); } catch (_) { /* уже есть */ }
 
 module.exports = { db, STORAGE_DIR };

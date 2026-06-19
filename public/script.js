@@ -139,13 +139,12 @@
       if (password !== (confirmInput.value || '')) { showError('Пароли не совпадают'); return; }
     }
 
-    // Тело запроса. Бэкенд сейчас принимает только { email, password }.
-    // Когда на сервере добавят поддержку имени/фамилии — раскомментируй строки ниже.
+    // Тело запроса. При регистрации передаём имя и фамилию — сервер их сохраняет.
     const payload = { email, password };
-    // if (mode === 'register') {
-    //   payload.firstName = (firstNameInput.value || '').trim();
-    //   payload.lastName  = (lastNameInput.value  || '').trim();
-    // }
+    if (mode === 'register') {
+      payload.firstName = (firstNameInput.value || '').trim();
+      payload.lastName  = (lastNameInput.value  || '').trim();
+    }
 
     submitBtn.disabled = true;
     try {
